@@ -1,5 +1,5 @@
 import warnings
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from typing import Any, Optional
 
@@ -50,11 +50,15 @@ class KokoroGenerator:
         self,
         text: str,
         voice: str = "af_heart",
-        speed: float = 1.0,
+        speed: float | Callable[[int], float] = 1.0,
         split_pattern: str = r"\n+",
     ) -> Generator[AudioResult, Any]:
         """
         Generate audio chunks from text.
+
+        Args:
+            speed: Fixed multiplier, or a callable resolved once per chunk so the
+                speed can change while a long text is still being spoken.
 
         Yields:
             AudioResult: A chunk of generated audio.
