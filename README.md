@@ -14,7 +14,10 @@ stream audio, auto‑play, and auto‑save WAVs without leaving the terminal.
 - Fast voice switching with inline completions (`@af_heart`, `@pf_dora`, etc.).
 - Prompt Toolkit UI with Meta+Enter submission, bottom toolbar state, and
   vim/emacs editing modes.
-- Simple commands (`/exit`) plus Ctrl+S / Ctrl+P toggles for save/play.
+- Live control menu while speaking: pause, skip a chunk, stop, and change speed
+  without waiting for the end.
+- Simple commands (`/exit`, `/speed`) plus Ctrl+S / Ctrl+P toggles for
+  save/play.
 
 ## Requirements
 
@@ -67,9 +70,32 @@ ready!” message when loaded.
 - Toggles during the session:
   - `Ctrl+S`: toggle `auto_save` (writes timestamped WAVs to `output/`).
   - `Ctrl+P`: toggle `auto_play`.
+  - `Ctrl+↑` / `Ctrl+↓`: speed up/down (also `/speed 1.5`, `/speed +`,
+    `/speed -0.2`, `/speed reset`).
 - Bottom toolbar shows current toggles + voice.
 
 Generated files live in `output/` as `<timestamp>_<voice>.wav`.
+
+### Control menu while speaking
+
+With `auto_play` on, a control menu takes over the terminal while the text is
+being spoken. It shows the current chunk, a progress bar, the speed and the
+voice, and it disappears when the speech ends:
+
+```text
+ ▶ Playing  chunk 2 ████████░░░░░░░░░░░░ 00:03/00:07 · 1.0x · @pf_dora
+ [space] pause  [n] next chunk  [s] stop  [↑/↓] speed
+```
+
+| Key                    | Action                                            |
+| ---------------------- | ------------------------------------------------- |
+| `space` / `p`          | Pause or resume playback                           |
+| `n`                    | Skip the current chunk and jump to the next        |
+| `s` / `q` / `Ctrl+C`   | Stop the speech (nothing is saved to `output/`)    |
+| `↑` / `↓` / `+` / `-`  | Change speed, applied from the next chunk onwards  |
+
+Speed changes take effect on the next chunk because a chunk is already
+synthesized when it starts playing.
 
 ## Kokoro Notes
 

@@ -125,6 +125,7 @@ def print_description() -> None:
         "Type your text and press [Meta+Enter] or [Esc] then [Enter] to submit.",
     )
     print_dim("Commands: Type '@' to see options for voice/language.")
+    print_dim("While speaking: [space] pause, [n] next chunk, [s] stop, [↑/↓] speed.")
     print_text("Press [Ctrl+C] or /exit [Meta+Enter] to exit.\n")
 
 

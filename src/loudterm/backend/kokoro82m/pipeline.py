@@ -2,20 +2,26 @@ import time
 
 import torch
 
+from loudterm.audio.controls import PlaybackControls
 from loudterm.audio.player import AudioPlayer
 from loudterm.audio.writer import AudioWriter
 from loudterm.backend.kokoro82m.generator import KokoroGenerator
 from loudterm.config import AppConfig
 from loudterm.core import AudioResult
-from loudterm.ui.prints import print_error, print_info, print_success
+from loudterm.ui.prints import print_error, print_info, print_success, print_warning
 
 
 def kokoro_blocking_pipeline(
     text: str,
     app_config: AppConfig,
     generator: KokoroGenerator,
+    controls: PlaybackControls | None = None,
 ) -> None:
-    """Synchronous pipeline to run on worker thread."""
+    """Synchronous pipeline to run on worker thread.
+
+    When `controls` is given, playback becomes interruptible: the control menu
+    running on the event loop can pause, skip or stop the speech mid-flight.
+    """
     audio_player: AudioPlayer | None = AudioPlayer() if app_config.auto_play else None
     audio_writer: AudioWriter | None = AudioWriter() if app_config.auto_save else None
 
@@ -28,7 +34,8 @@ def kokoro_blocking_pipeline(
         audio_stream = generator.generate(
             text=text,
             voice=app_config.voice or "af_heart",
-            speed=app_config.speed,
+            # Resolved per chunk, so the menu can change speed mid-speech
+            speed=lambda _: app_config.speed,
         )
 
         for i, audio_result in enumerate(audio_stream, start=1):
@@ -36,16 +43,28 @@ def kokoro_blocking_pipeline(
                 sample_rate = audio_result.sample_rate
 
             if audio_player is not None:
-                print_info(f"> [Chunk {i}] Playing...")
-                audio_player.play(audio_result)
+                if controls is None:
+                    print_info(f"> [Chunk {i}] Playing...")
+                else:
+                    controls.start_chunk(i)
+
+                audio_player.play(audio_result, controls)
 
             if audio_writer is not None:
                 all_audio_chunks.append(audio_result.samples)
+
+            # Checked here so a cancelled session never synthesizes one more chunk
+            if controls is not None and controls.is_stopped:
+                break
 
         print()
 
     except Exception:  # noqa: BLE001
         print_error("Error during generation. Check logs for details.\n")
+        return
+
+    if controls is not None and controls.is_stopped:
+        print_warning("Speech cancelled, nothing was saved.\n")
         return
 
     if audio_writer is not None and all_audio_chunks and sample_rate is not None:
